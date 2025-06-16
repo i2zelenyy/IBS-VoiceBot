@@ -81,7 +81,7 @@ while True:
                     matched_chunks.append(d["page_content"][:MAX_CONTEXT_CHARS])
         
         if not matched_chunks:
-            D, I = index.search(np.array([vector]), k=3)
+            D, I = index.search(np.array([vector]), k=5)
             for rank, idx in enumerate(I[0]):
                 if D[0][rank] > SIMILARITY_THRESHOLD and idx < len(docs):
                     doc = docs[idx]
@@ -90,12 +90,13 @@ while True:
 
         context = "\n\n".join(matched_chunks[:3])
         prompt_text = (
-            "You are a helpful voice assistant for municipal services in Karlsruhe.\n"
-            "Speak clearly and simply. Give short and complete answers in 1 to 3 sentences.\n"
-            "Avoid unnecessary detail or legal language.\n\n"
-            f"Question: {user_input}\n\n"
+            "You are an assistant for municipal services in Karlsruhe. Respond only based on the provided context.\n"
+            "Do NOT invent names, places or services. If context is missing, say 'Sorry, I couldn't find information about that.'\n"
+            "Answer in the same language as the question. Use 1–3 complete sentences."
+            f"Question: {user_input}\n"
             f"Context:\n{context}"
         )
+
 
         payload = {
             "model": LLM_MODEL,
