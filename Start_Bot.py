@@ -4,6 +4,7 @@ import faiss
 import numpy as np
 import requests
 from sentence_transformers import SentenceTransformer
+from langdetect import detect
 
 INDEX_PATH = "karlsruhe_faiss_db/index.faiss"
 DOCS_PATH = "karlsruhe_faiss_db/docs.pkl"
@@ -67,8 +68,16 @@ while True:
         break
 
     try:
-        vector = embed(user_input)
+        try:
+            lang = detect(user_input)
+            lang_hint = {
+                "de": "The user's question is in German. Answer only in German.",
+                "en": "The user's question is in English. Answer only in English."
+            }.get(lang, "")
+        except:
+            lang_hint = ""
 
+        vector = embed(user_input)
         intent = detect_intent(user_input, all_intents)
 
         matched_chunks = []
@@ -89,14 +98,20 @@ while True:
                     matched_chunks.append(text.strip())
 
         context = "\n\n".join(matched_chunks[:3])
+        
+        history_text = ""
+        for q, a in history[-3:]:
+            history_text += f"User: {q}\nAssistant: {a}\n"
+    
         prompt_text = (
-            "You are an assistant for municipal services in Karlsruhe. Respond only based on the provided context.\n"
-            "Do NOT invent names, places or services. If context is missing, say 'Sorry, I couldn't find information about that.'\n"
-            "Answer in the same language as the question. Use 1–3 complete sentences."
-            f"Question: {user_input}\n"
+            "You are an assistant for municipal services in Karlsruhe. Respond only based on the provided context and prior conversation.\n"
+            "Do NOT invent names, places or services.\n"
+            f"{lang_hint}\n"
+            "Use 1–3 complete sentences.\n\n"
+            f"{history_text.strip()}\n"
+            f"User: {user_input}\n"
             f"Context:\n{context}"
         )
-
 
         payload = {
             "model": LLM_MODEL,
